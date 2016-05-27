@@ -1,13 +1,11 @@
 package avirankatz.luciddream;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -15,10 +13,16 @@ import android.widget.Toast;
 import java.text.SimpleDateFormat;
 
 import DAL.DBHelper;
+import DAL.DreamContract;
+import models.Dream;
 
 public class NewDreamDocument extends AppCompatActivity {
 
     private long date;
+    private String title;
+    private String content;
+    boolean isNewDream;
+    private long dreamId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,19 +31,32 @@ public class NewDreamDocument extends AppCompatActivity {
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        this.date = System.currentTimeMillis();
-        SimpleDateFormat dateToday = new SimpleDateFormat("dd/MM/yy");
-        TextView tvToday = (TextView) findViewById(R.id.textView_today);
-        tvToday.setText(dateToday.format(date));
+        isNewDream = tryGetExtras();
+        if (date == 0) { date = System.currentTimeMillis(); }
+        setViews();
+    }
 
-        FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
+    private void setViews() {
+        SimpleDateFormat dateToday = new SimpleDateFormat("dd/MM/yy");
+
+        EditText etTitle = (EditText) findViewById(R.id.editText_dreamHeader);
+        EditText etContent = (EditText) findViewById(R.id.editText_dreamScript);
+        TextView tvDate = (TextView) findViewById(R.id.textView_today);
+
+        etTitle.setText(title);
+        etContent.setText(content);
+        tvDate.setText(dateToday.format(date));
+
+    }
+
+    private boolean tryGetExtras() {
+        Intent creator = getIntent();
+        title = creator.hasExtra(DreamContract.Dream.COLUMN_NAME_DREAM_TITLE) ? creator.getStringExtra(DreamContract.Dream.COLUMN_NAME_DREAM_TITLE) : "";
+        content = creator.hasExtra(DreamContract.Dream.COLUMN_NAME_DREAM_CONTENT) ? creator.getStringExtra(DreamContract.Dream.COLUMN_NAME_DREAM_CONTENT) : "";
+        date = creator.getLongExtra(DreamContract.Dream.COLUMN_NAME_TIME_OF_CREATION, 0);
+        dreamId = creator.getLongExtra(DreamContract.Dream._ID, 0);
+        if (dreamId == 0) { return true; }
+        return false;
     }
 
     @Override
@@ -55,6 +72,12 @@ public class NewDreamDocument extends AppCompatActivity {
         if (item.getItemId() == R.id.menuItem_saveNewDream) {
             if (saveCurrentDream()) {
                 Toast.makeText(NewDreamDocument.this, getString(R.string.toast_dreamSavedSuccessfully), Toast.LENGTH_SHORT).show();
+                Intent result = new Intent();
+                setResult(RESULT_OK, result);
+                finish();
+            }
+            else {
+                Toast.makeText(NewDreamDocument.this, "בעיה לא צפויה קרתה", Toast.LENGTH_SHORT).show();
             }
             return true;
         }
@@ -68,11 +91,13 @@ public class NewDreamDocument extends AppCompatActivity {
         EditText etDreamScript = (EditText) findViewById(R.id.editText_dreamScript);
         String dreamScript = etDreamScript.getText().toString();
         DBHelper dbHelper = new DBHelper(this);
-        if (dbHelper.insertNewDream(dreamHeader, dreamScript)) {
-            return true;
+        Dream dream = new Dream(dreamHeader, dreamScript, date);
+        if (isNewDream) {
+            return dbHelper.insertNewDream(dream);
         }
-        else {
-            return false;
+        else if (dreamId != 0) {
+            return dbHelper.editDream(dreamId, dream);
         }
+        return false;
     }
 }

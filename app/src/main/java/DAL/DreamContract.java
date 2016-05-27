@@ -12,5 +12,6 @@ public final class DreamContract {
         public static final String DREAM_TABLE_NAME = "dreamDiary";
         public static final String COLUMN_NAME_DREAM_TITLE = "title";
         public static final String COLUMN_NAME_DREAM_CONTENT = "dreamContent";
+        public static final String COLUMN_NAME_TIME_OF_CREATION = "timeOfCreation";
     }
 }
